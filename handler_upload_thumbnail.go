@@ -46,8 +46,8 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 	}
 	mediaType := fileHeader.Header.Get("Content-type")
 	mimeType, _, err := mime.ParseMediaType(mediaType)
-
-	if mimeType != "image/jpeg" || mimeType != "image/png" {
+	fmt.Println(mimeType)
+	if (mimeType != "image/jpeg") && (mimeType != "image/png") {
 		respondWithError(w, http.StatusUnsupportedMediaType, "thumbnail files must be jpeg/png", err)
 		return
 	}
