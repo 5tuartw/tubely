@@ -1,10 +1,10 @@
 package main
 
 import (
+	"crypto/rand"
 	"encoding/base64"
 	"fmt"
 	"io"
-	"crypto/rand"
 	"mime"
 	"net/http"
 	"os"
@@ -73,11 +73,26 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 	// Reset the tempFile's file pointer to the beginning to read the file again
 	tmpFile.Seek(0, io.SeekStart)
 
+	aspectRatio, err := getVideoAspectRatio(tmpFile.Name())
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "could not get aspect ratio of file", err)
+	}
+
 	randByteSlice := make([]byte, 32)
 	rand.Read(randByteSlice)
 	randString := base64.RawURLEncoding.EncodeToString(randByteSlice)
 
-	filename := randString + ".mp4"
+	var prefix string
+	switch aspectRatio {
+	case "16:9":
+		prefix = "landscape"
+	case "9:16":
+		prefix = "portrait"
+	default:
+		prefix = "other"
+	}
+
+	filename := prefix + "/" + randString + ".mp4"
 
 	_, err = cfg.s3Client.PutObject(r.Context(), &s3.PutObjectInput{
 		Bucket:      &cfg.s3Bucket,
@@ -85,7 +100,7 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		Body:        tmpFile,
 		ContentType: &mimeType,
 	})
-	if err !=nil {
+	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "failed to upload to S3", err)
 		return
 	}
