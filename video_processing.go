@@ -7,6 +7,13 @@ import (
 	"log"
 	"os/exec"
 	"strings"
+
+	/*"runtime/debug"
+	"time"
+	"context"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/bootdotdev/learn-file-storage-s3-golang-starter/internal/database"*/
 )
 
 type VideoInfo struct {
@@ -78,3 +85,58 @@ func min(a, b int) int {
 	}
 	return b
 }
+
+func processvideoForFastStart(filePath string) (string, error) {
+	newFilePath := filePath + ".processing"
+	cmd := exec.Command("ffmpeg", "-i", filePath, "-c", "copy", "-movflags", "faststart", "-f", "mp4", newFilePath)
+	//var out bytes.Buffer
+	//cmd.Stdout = &out
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	if err != nil {
+		return "", fmt.Errorf("ffmpeg error: %w, stderr: %s", err, stderr.String())
+	}
+
+	return newFilePath, nil
+}
+
+/*func generatePresignedURL(s3Client *s3.Client, bucket, key string, expireTime time.Duration) (string, error) {
+	presignedClient := s3.NewPresignClient(s3Client)
+	request, err := presignedClient.PresignGetObject(context.Background(),
+		&s3.GetObjectInput{
+			Bucket: aws.String(bucket),
+			Key:    aws.String(key),
+		},
+		s3.WithPresignExpires(expireTime))
+	if err != nil {
+		return "", err
+	}
+	return request.URL, nil
+}
+
+func (cfg *apiConfig) dbVideoToSignedVideo(video database.Video) (database.Video, error) {
+	fmt.Println("dbVideoToSignedVideo called with video ID:", video.ID)
+	debug.PrintStack()
+
+	if video.VideoURL == nil {
+		return video, nil
+	}
+
+	videoParams := strings.Split(*video.VideoURL, ",")
+	if len(videoParams) != 2 {
+		return video, fmt.Errorf("could not parse video information for presigned URL from VideoURL")
+	}
+	bucket := videoParams[0]
+	key := videoParams[1]
+
+	presignedURL, err := generatePresignedURL(cfg.s3Client, bucket, key, (1 * time.Minute))
+	if err != nil {
+		return video, fmt.Errorf("could not generate presigned url: %w", err)
+	}
+
+	signedVideo := video
+	signedVideo.VideoURL = &presignedURL
+
+	return signedVideo, nil
+}*/
